@@ -54,7 +54,8 @@ async function apiData(table, country, years) {
 }
 
 async function check(table, country) {
-  const page = parsePage(await text(PAGE + table.publishedPath + '/' + country));
+  const path = IDS.GROUPS.includes(country) ? table.publishedGroupPath : table.publishedPath;
+  const page = parsePage(await text(PAGE + path + '/' + country));
   if (!page.rows.length) throw new Error('No table rows on the page');
   const data = await apiData(table, country, page.years);
   const issues = [];
@@ -66,6 +67,8 @@ async function check(table, country) {
   if (page.headings.join('|') !== ourHeadings.join('|')) issues.push(`headings differ: ${page.headings.join(' | ')}`);
 
   let cells = 0;
+  let groupGaps = 0;
+  const roundingDiffs = [];
   for (const pub of page.rows) {
     const row = defined.find((r) => r.id === pub.id);
     if (!row) { issues.push(`${pub.id} "${pub.label}" is not in the dashboard`); continue; }
@@ -74,10 +77,18 @@ async function check(table, country) {
     pub.values.forEach((value, i) => {
       cells++;
       const ours = IDS.cellText(row, data, page.years[i]);
-      if (ours !== value) issues.push(`${pub.id} ${row.label} ${page.years[i]}: page ${value}, dashboard ${ours}`);
+      if (ours === value) return;
+      const number = (s) => Number(s.replace(/,/g, ''));
+      if (IDS.GROUPS.includes(country) && value === '..' && table.knownGroupGaps?.includes(pub.id)) {
+        groupGaps++;
+      } else if (Array.isArray(row.source) && Math.abs(number(ours) - number(value)) < 0.11) {
+        roundingDiffs.push(`${country} ${pub.id} ${page.years[i]}: page ${value}, dashboard ${ours}`);
+      } else {
+        issues.push(`${pub.id} ${row.label} ${page.years[i]}: page ${value}, dashboard ${ours}`);
+      }
     });
   }
-  return { country, cells, issues, years: page.years, countries: page.countries };
+  return { country, cells, issues, groupGaps, roundingDiffs, years: page.years, countries: page.countries };
 }
 
 async function verifyTable(table, requested) {
@@ -86,13 +97,22 @@ async function verifyTable(table, requested) {
 
   const firstCode = requested[0] ?? 'AFG';
   const first = await check(table, firstCode);
-  const published = first.countries;
+  // A run limited to named countries doesn't compare the dropdown.
+  const published = requested.length ? apiCountries : first.countries;
   const missingFromApi = published.filter((c) => !apiCountries.includes(c));
   const extraInApi = apiCountries.filter((c) => !published.includes(c));
   const queue = requested.length ? requested.slice(1) : published.filter((c) => c !== firstCode);
 
   const results = [first];
   const failures = [];
+  let publishedGroups = null;
+  if (!requested.length) {
+    const firstGroup = await check(table, IDS.GROUPS[0]);
+    results.push(firstGroup);
+    publishedGroups = firstGroup.countries;
+    queue.push(...publishedGroups.filter((c) => c !== IDS.GROUPS[0]));
+  }
+  const groupsDiffer = publishedGroups && [...publishedGroups].sort().join() !== [...IDS.GROUPS].sort().join();
   await Promise.all(Array.from({ length: CONCURRENCY }, async () => {
     while (queue.length) {
       const country = queue.shift();
@@ -110,14 +130,20 @@ async function verifyTable(table, requested) {
   console.log(`Dropdown: published ${published.length}, dashboard ${apiCountries.length}`);
   if (missingFromApi.length) console.log('  on published page only:', missingFromApi.join(', '));
   if (extraInApi.length) console.log('  in dashboard only:', extraInApi.join(', '));
-  console.log(`Countries compared: ${results.length}. Cells compared: ${cells}. Differences: ${issueCount}.`);
+  if (publishedGroups) console.log(`Regional and income groups: published ${publishedGroups.length}, dashboard ${IDS.GROUPS.length}`);
+  if (groupsDiffer) console.log(`  published groups differ: ${publishedGroups.join(', ')}`);
+  console.log(`Tables compared: ${results.length}. Cells compared: ${cells}. Differences: ${issueCount}.`);
+  const groupGaps = results.reduce((n, r) => n + r.groupGaps, 0);
+  const roundingDiffs = results.flatMap((r) => r.roundingDiffs);
+  if (groupGaps) console.log(`Known differences: ${groupGaps} regional cells where the published page shows ".." and the dashboard shows a calculated value.`);
+  if (roundingDiffs.length) console.log(`Calculated cells differing by 0.1 from rounding: ${roundingDiffs.length}\n  ${roundingDiffs.slice(0, 10).join('\n  ')}`);
   Object.values(table.knownDifferences ?? {}).forEach((reason) => console.log(`Not compared: ${reason}`));
   if (failures.length) console.log(`Could not compare ${failures.length}:\n  ${failures.join('\n  ')}`);
   for (const r of withIssues) {
     console.log(`\n${r.country} (${r.issues.length})`);
     r.issues.slice(0, 15).forEach((issue) => console.log('  ' + issue));
   }
-  return !(issueCount || failures.length || missingFromApi.length || extraInApi.length);
+  return !(issueCount || failures.length || missingFromApi.length || extraInApi.length || groupsDiffer);
 }
 
 const args = process.argv.slice(2);

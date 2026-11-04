@@ -44,6 +44,10 @@
     name: 'Analytical',
     title: 'Country analytical table',
     publishedPath: 'countryanalytical',
+    publishedGroupPath: 'regionanalytical',
+    // Calculated rows where published regional pages can show ".." because one part is
+    // missing. Country pages count a missing part as 0, and the dashboard does so everywhere.
+    knownGroupGaps: ['R52', 'R59', 'R60', 'R62'],
     allSeries: false,
     fontSize: 12,
     unitNote: '$ millions, unless otherwise indicated',
@@ -112,6 +116,8 @@
 
   // Regional and income groups the API lists as countries.
   var AGGREGATES = ['EAP', 'ECA', 'IDA', 'IDX', 'LAC', 'LDC', 'LIC', 'LMC', 'LMY', 'MIC', 'MNA', 'SAS', 'SSA', 'UMC'];
+  // The ones with published regional tables, which are the ones the dropdowns offer.
+  var GROUPS = ['EAP', 'ECA', 'LAC', 'LIC', 'LMY', 'MIC', 'MNA', 'SAS', 'SSA'];
 
   function rowsOf(table) {
     return table.entries.filter(function (entry) { return !entry.heading; });
@@ -187,6 +193,7 @@
   root.IDS = {
     API_BASE: 'https://api.worldbank.org/v2',
     AGGREGATES: AGGREGATES,
+    GROUPS: GROUPS,
     YEARS_SHOWN: 11,
     PER_PAGE: 10000,
     tables: { analytical: analytical },

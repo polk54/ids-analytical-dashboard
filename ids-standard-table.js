@@ -503,6 +503,7 @@
     name: 'Standard',
     title: 'Country standard table',
     publishedPath: 'country',
+    publishedGroupPath: 'region',
     // Too many series to list in one URL, so this table requests all of them.
     allSeries: true,
     fontSize: 11,

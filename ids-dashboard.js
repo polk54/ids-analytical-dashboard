@@ -63,9 +63,12 @@
 
   function loadCountries() {
     return jsonp('/sources/6/country', { per_page: 500 }, 'idsCountries').then(function (response) {
-      return response.source[0].concept[0].variable
-        .filter(function (c) { return !IDS.AGGREGATES.includes(c.id); })
+      var all = response.source[0].concept[0].variable
         .sort(function (a, b) { return a.value.localeCompare(b.value); });
+      return {
+        countries: all.filter(function (c) { return !IDS.AGGREGATES.includes(c.id); }),
+        groups: all.filter(function (c) { return IDS.GROUPS.includes(c.id); }),
+      };
     });
   }
 
@@ -190,6 +193,13 @@
   }
 
 
+  function optionGroup(label, items) {
+    var group = document.createElement('optgroup');
+    group.label = label;
+    items.forEach(function (c) { group.appendChild(new Option(c.value, c.id)); });
+    return group;
+  }
+
   function start() {
     clearMessage();
     select.options[0].text = 'Loading…';
@@ -199,7 +209,10 @@
       return Promise.all([loadCountries(), loadYears()]);
     }).then(function (results) {
       years = results[1];
-      select.replaceChildren.apply(select, results[0].map(function (c) { return new Option(c.value, c.id); }));
+      select.replaceChildren(
+        optionGroup('Countries', results[0].countries),
+        optionGroup('Regions and income groups', results[0].groups)
+      );
       select.disabled = false;
       selectFromUrl();
       show();
