@@ -1,5 +1,7 @@
 # IDS country analytical table
 
+**Live page: https://www.parulagarwal.com/ids-analytical-dashboard/**
+
 A static page that rebuilds the International Debt Statistics
 [country analytical table](https://datatopics.worldbank.org/debt/ids/countryanalytical/AFG)
 from the World Bank API. Data is fetched live in the browser, so there is no build step or server code.
