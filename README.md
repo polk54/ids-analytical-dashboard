@@ -30,4 +30,5 @@ node tools/verify.mjs
 
 - The API's data endpoint sends no CORS header, so the page uses JSONP.
 - "Reserves to imports (months)" shows the API value. The published standard table shows 0.0 for this row.
-- API responses can be cached for up to 24 hours. To force fresh data after a release, change `DATA_VERSION` in `ids-dashboard.js`.
+- API responses can be cached for up to 24 hours. To force fresh data after a release, change `DATA_VERSION` in `ids-dashboard.js`. Then change `?v=` as below.
+- Browsers can keep the JS and CSS files for 4 hours. After changing any of them, raise the `?v=` number everywhere in `index.html` and `standard/index.html`, or visitors can end up with mismatched files.

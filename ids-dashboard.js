@@ -14,7 +14,8 @@
   var DEFAULT_COUNTRY = 'AFG';
   var TIMEOUT_MS = 20000;
   // API responses are cached for up to 24 hours. Change this after a data release
-  // to make browsers and the CDN fetch fresh data straight away.
+  // to make browsers and the CDN fetch fresh data straight away. Also change ?v= in
+  // both HTML files, or browsers may keep using their old copy of this file for hours.
   var DATA_VERSION = '1';
 
   var select = document.getElementById('country');
@@ -155,7 +156,9 @@
     areaEl.classList.add('loading');
     statusEl.textContent = 'Loading ' + name + '…';
 
-    return jsonp(IDS.tablePath(TABLE, code, years), { per_page: IDS.PER_PAGE }, 'idsData_' + TABLE.id + '_' + code).then(function (response) {
+    return Promise.resolve().then(function () {
+      return jsonp(IDS.tablePath(TABLE, code, years), { per_page: IDS.PER_PAGE }, 'idsData_' + TABLE.id + '_' + code);
+    }).then(function (response) {
       if (requestId !== latestRequest) return;
       var parsed = IDS.parseResponse(response);
       if (parsed.pages !== 1) throw new Error('Response was split across pages');
@@ -191,7 +194,10 @@
     clearMessage();
     select.options[0].text = 'Loading…';
     statusEl.textContent = 'Connecting to the World Bank API…';
-    Promise.all([loadCountries(), loadYears()]).then(function (results) {
+    // Starting inside a promise sends any error to the catch below, so it can't leave the page stuck.
+    Promise.resolve().then(function () {
+      return Promise.all([loadCountries(), loadYears()]);
+    }).then(function (results) {
       years = results[1];
       select.replaceChildren.apply(select, results[0].map(function (c) { return new Option(c.value, c.id); }));
       select.disabled = false;
