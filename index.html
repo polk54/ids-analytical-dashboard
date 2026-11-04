@@ -83,6 +83,15 @@
 (function () {
   'use strict';
 
+  if (!window.IDS) {
+    var failed = document.getElementById('country');
+    failed.options[0].text = 'Unavailable';
+    var notice = document.getElementById('message');
+    notice.className = 'error';
+    notice.textContent = 'This page could not load ids-tables.js, or this browser could not run it. Try refreshing, or use a current version of your browser.';
+    return;
+  }
+
   var TABLE = IDS.tables.analytical;
   var DEFAULT_COUNTRY = 'AFG';
   var TIMEOUT_MS = 20000;
@@ -263,15 +272,17 @@
 
   function start() {
     clearMessage();
-    statusEl.textContent = 'Loading…';
+    select.options[0].text = 'Loading…';
+    statusEl.textContent = 'Connecting to the World Bank API…';
     Promise.all([loadCountries(), loadYears()]).then(function (results) {
       years = results[1];
       select.replaceChildren.apply(select, results[0].map(function (c) { return new Option(c.value, c.id); }));
       select.disabled = false;
       showCountry(selectFromUrl());
-    }).catch(function () {
+    }).catch(function (err) {
       statusEl.textContent = '';
-      showError('Could not reach the World Bank API.', start);
+      select.options[0].text = 'Unavailable';
+      showError('Could not get data from api.worldbank.org (' + err.message + '). The API may be down, or a browser extension, firewall or VPN may be blocking it.', start);
     });
   }
 

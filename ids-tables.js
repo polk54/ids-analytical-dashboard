@@ -123,12 +123,12 @@
     var text = String(Math.abs(value));
     if (text.includes('e')) text = Math.abs(value).toFixed(20);
     var parts = text.split('.');
-    var tenths = BigInt(parts[0] + (parts[1] || '0').charAt(0));
-    if ((parts[1] || '').charAt(1) >= '5') tenths += 1n;
-    var digits = tenths.toString().padStart(2, '0');
+    var tenths = Number(parts[0] + (parts[1] || '0').charAt(0));
+    if ((parts[1] || '').charAt(1) >= '5') tenths += 1;
+    var digits = String(tenths).padStart(2, '0');
     var whole = digits.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     // A value that rounds to zero prints as 0.0, never -0.0.
-    var sign = value < 0 && tenths !== 0n ? '-' : '';
+    var sign = value < 0 && tenths !== 0 ? '-' : '';
     return sign + whole + '.' + digits.slice(-1);
   }
 
