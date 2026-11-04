@@ -13,10 +13,15 @@
 
   // id: row id on the published page. indent: px. style: b = bold, i = italic.
   function row(id, label, indent, style, source) {
-    return { id: id, label: label, indent: indent, bold: style.includes('b'), italic: style.includes('i'), source: source };
+    return {
+      id: id, label: label, indent: indent, bold: style.includes('b'), italic: style.includes('i'),
+      // Blue labels on the published page, except these four direct rows.
+      blue: typeof source === 'string' && !['R54', 'R55', 'R56', 'R57'].includes(id),
+      source: source,
+    };
   }
   function heading(label, level) {
-    return { heading: true, label: label, level: level };
+    return { heading: true, label: label, indent: 10, size: level === 1 ? 14 : 12 };
   }
   function plus() {
     return Array.from(arguments).map(function (code) { return [1, code]; });
@@ -36,7 +41,11 @@
 
   var analytical = {
     id: 'analytical',
+    name: 'Analytical',
     title: 'Country analytical table',
+    publishedPath: 'countryanalytical',
+    allSeries: false,
+    fontSize: 12,
     unitNote: '$ millions, unless otherwise indicated',
     note: 'Note: Public and publicly guaranteed does not include the Use of IMF credit and SDR allocations.',
     entries: [].concat(
@@ -137,7 +146,8 @@
     if (typeof r.source === 'string') {
       raw = (bySeries[r.source] || {})[year];
       if (raw === null || raw === undefined) return null;
-      return r.source.endsWith('.ZS') ? raw : raw / 1e6;
+      // US$ series show in millions; ratios, years and months show as they are.
+      return /\.CD(\.DT)?$/.test(r.source) ? raw / 1e6 : raw;
     }
     raw = r.source.reduce(function (total, term) {
       return total + term[0] * ((bySeries[term[1]] || {})[year] || 0);
@@ -163,15 +173,22 @@
     return { series: series, lastUpdated: response.lastupdated, pages: response.pages };
   }
 
-  function dataPath(country, codes, years) {
-    return '/sources/6/country/' + country + '/series/' + codes.join(';') +
-      '/counterpart-area/WLD/time/' + years.map(function (y) { return 'YR' + y; }).join(';');
+  // series and years are arrays, or 'all'.
+  function dataPath(country, series, years) {
+    return '/sources/6/country/' + country +
+      '/series/' + (series === 'all' ? 'all' : series.join(';')) +
+      '/counterpart-area/WLD/time/' + (years === 'all' ? 'all' : years.map(function (y) { return 'YR' + y; }).join(';'));
+  }
+
+  function tablePath(table, country, years) {
+    return dataPath(country, table.allSeries ? 'all' : seriesOf(table), years);
   }
 
   root.IDS = {
     API_BASE: 'https://api.worldbank.org/v2',
     AGGREGATES: AGGREGATES,
     YEARS_SHOWN: 11,
+    PER_PAGE: 10000,
     tables: { analytical: analytical },
     rowsOf: rowsOf,
     seriesOf: seriesOf,
@@ -179,5 +196,6 @@
     cellText: cellText,
     parseResponse: parseResponse,
     dataPath: dataPath,
+    tablePath: tablePath,
   };
 })(globalThis);

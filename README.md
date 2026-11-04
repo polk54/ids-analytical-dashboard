@@ -1,14 +1,22 @@
-# IDS country analytical table
+# IDS country tables
 
-**Live page: https://www.parulagarwal.com/ids-analytical-dashboard/**
+**Live pages:**
 
-A static page that rebuilds the International Debt Statistics
-[country analytical table](https://datatopics.worldbank.org/debt/ids/countryanalytical/AFG)
+- Analytical table: https://www.parulagarwal.com/ids-analytical-dashboard/
+- Standard table: https://www.parulagarwal.com/ids-analytical-dashboard/standard/
+
+Static pages that rebuild the International Debt Statistics
+[analytical](https://datatopics.worldbank.org/debt/ids/countryanalytical/AFG) and
+[standard](https://datatopics.worldbank.org/debt/ids/country/AFG) country tables
 from the World Bank API. Data is fetched live in the browser, so there is no build step or server code.
 
-- `index.html`: the page
-- `ids-tables.js`: table rows, formulas and number formatting
-- `tools/verify.mjs`: compares the table with the published pages
+- `index.html`, `standard/index.html`: the two pages
+- `ids-dashboard.js`, `ids-dashboard.css`: code and styling shared by both pages
+- `ids-tables.js`: analytical table rows, formulas and number formatting
+- `ids-standard-table.js`: standard table rows
+- `tools/verify.mjs`: compares both tables with the published pages
+
+Link to a country by adding `?country=KEN` to either page.
 
 ## Check against the published pages
 
@@ -21,4 +29,5 @@ node tools/verify.mjs
 ## Notes
 
 - The API's data endpoint sends no CORS header, so the page uses JSONP.
-- API responses can be cached for up to 24 hours. To force fresh data after a release, change `DATA_VERSION` in `index.html`.
+- "Reserves to imports (months)" shows the API value. The published standard table shows 0.0 for this row.
+- API responses can be cached for up to 24 hours. To force fresh data after a release, change `DATA_VERSION` in `ids-dashboard.js`.
